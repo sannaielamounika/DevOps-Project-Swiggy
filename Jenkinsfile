@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         DOCKER_IMAGE  = "sannaielamounika/swiggyapp"
-        DOCKER_CRED   = 'dockerHub-token'
+        DOCKER_CRED   = 'DockerHub-token'
         SONAR_TOKEN   = credentials('sonar-token')
     }
 
@@ -46,7 +46,7 @@ pipeline {
             }
         }
 
-        // ✅ SONAR ANALYSIS
+        // ✅ SONAR SCAN
         stage('SonarQube Analysis') {
             steps {
                 withSonarQubeEnv('sonar-server') {
@@ -67,7 +67,7 @@ pipeline {
             }
         }
 
-        // ✅ QUALITY GATE (NON-BLOCKING + SAFE)
+        // ✅ NON-BLOCKING QUALITY GATE
         stage('Quality Gate') {
             steps {
                 script {
@@ -82,7 +82,7 @@ pipeline {
             }
         }
 
-        // ✅ OWASP (OPTIMIZED - DOWNLOAD ONCE)
+        // ✅ OWASP (FIXED)
         stage('OWASP Dependency Check') {
             steps {
                 sh '''
@@ -97,8 +97,7 @@ pipeline {
                     ./dependency-check.sh \
                     --project "swiggyapp" \
                     --scan $WORKSPACE \
-                    --format XML \
-                    --noupdate || true
+                    --format XML || true
                 '''
             }
         }
@@ -135,7 +134,7 @@ pipeline {
             }
         }
 
-        // ✅ DEPLOY
+        // ✅ DEPLOY CONTAINER
         stage('Deploy Container') {
             steps {
                 sh '''
