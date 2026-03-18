@@ -1,111 +1,15 @@
 pipeline {
     agent any
 
-    environment {
-        DOCKER_IMAGE  = "varaprasadrenati/swiggyapp"
-        SONAR_TOKEN   = credentials('sonar-token')
-        DOCKER_CRED   = 'dockerHub-token'
-        DC_CACHE      = '/var/lib/jenkins/Dependency-Check-data'
-    }
-
     stages {
-
-        stage('Clean Workspace') {
-            steps { cleanWs() }
-        }
-
-        stage('Checkout Code') {
+        stage('Test') {
             steps {
-                git branch: 'main', url: 'https://github.com/sannaielamounika/DevOps-Project-Swiggy'
-            }
-        }
+                echo "Pipeline working!"
 
-        stage('Verify Tools') {
-            steps {
                 sh '''
-                    echo "=== Checking installed tools ==="
-                    java -version
-                    node -v || echo "Node not installed"
-                    npm -v || echo "NPM not installed"
-                    docker --version
-                    trivy --version || echo "Trivy not installed"
-                '''
-            }
-        }
-
-        stage('SonarQube Analysis') {
-            steps {
-                withSonarQubeEnv('sonar-server') {
-                    sh """
-                        sonar-scanner \
-                        -Dsonar.projectName=swiggyapp-CICD \
-                        -Dsonar.projectKey=swiggyapp-CICD
-                    """
-                }
-            }
-        }
-
-        stage('Quality Gate') {
-            steps { waitForQualityGate abortPipeline: true }
-        }
-
-        stage('Install Dependencies') {
-            steps {
-                sh '''
-                    cd swiggyapp
-                    npm install --legacy-peer-deps --force
-                '''
-            }
-        }
-
-        stage('OWASP Dependency-Check') {
-            steps {
-                sh '''
-                    cd swiggyapp
-                    docker run --rm \
-                      -v $(pwd):/src \
-                      -v /var/lib/jenkins/Dependency-Check-data:/usr/share/dependency-check/data \
-                      owasp/dependency-check \
-                      --project "SwiggyApp" \
-                      --scan /src/package.json \
-                      --format HTML \
-                      --out /src/owasp-report || true
-                '''
-            }
-        }
-
-        stage('Trivy FS Scan') {
-            steps {
-                sh '''
-                    cd swiggyapp
-                    trivy fs . > trivyfs.txt || true
-                '''
-            }
-        }
-
-        stage('Docker Build & Push') {
-            steps {
-                script {
-                    withDockerRegistry(credentialsId: "${DOCKER_CRED}", url: 'https://index.docker.io/v1/') {
-                        sh "docker build -t ${DOCKER_IMAGE}:latest ./swiggyapp"
-                        sh "docker push ${DOCKER_IMAGE}:latest"
-                    }
-                }
-            }
-        }
-
-        stage('Trivy Image Scan') {
-            steps {
-                sh "trivy image ${DOCKER_IMAGE}:latest > trivyimage.txt || true"
-            }
-        }
-
-        stage('Deploy to Container') {
-            steps {
-                sh '''
-                    docker stop swiggy || true
-                    docker rm swiggy || true
-                    docker run -d -p 3000:3000 --name swiggy varaprasadrenati/swiggyapp:latest
+                    pwd
+                    ls
+                    echo "hello" > test.txt
                 '''
             }
         }
@@ -114,10 +18,7 @@ pipeline {
     post {
         always {
             echo "Pipeline finished!"
-
-            archiveArtifacts artifacts: 'swiggyapp/owasp-report/**/*.*', allowEmptyArchive: true
-            archiveArtifacts artifacts: 'swiggyapp/trivyfs.txt', allowEmptyArchive: true
-            archiveArtifacts artifacts: 'trivyimage.txt', allowEmptyArchive: true
+            archiveArtifacts artifacts: 'test.txt', allowEmptyArchive: true
         }
     }
 }
