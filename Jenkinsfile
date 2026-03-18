@@ -38,10 +38,11 @@ pipeline {
             }
         }
 
+        // 🔥 FASTER INSTALL
         stage('Install Dependencies') {
             steps {
                 sh '''
-                    npm install --prefer-offline --no-audit
+                    npm ci --no-audit
                 '''
             }
         }
@@ -51,16 +52,15 @@ pipeline {
             steps {
                 withSonarQubeEnv('sonar-server') {
                     sh '''
-                        export SONAR_SCANNER_OPTS="-Xmx2048m"
-                        export NODE_OPTIONS="--max-old-space-size=4096"
+                        export SONAR_SCANNER_OPTS="-Xmx1024m"
+                        export NODE_OPTIONS="--max-old-space-size=2048"
 
                         sonar-scanner \
                         -Dsonar.projectName=swiggyapp \
                         -Dsonar.projectKey=swiggyapp \
                         -Dsonar.login=$SONAR_TOKEN \
                         -Dsonar.sources=src \
-                        -Dsonar.exclusions=**/node_modules/**,**/*.test.js,build/**,coverage/**,public/** \
-                        -Dsonar.javascript.node.maxspace=4096 \
+                        -Dsonar.exclusions=**/node_modules/**,build/**,coverage/** \
                         -Dsonar.sourceEncoding=UTF-8
                     '''
                 }
@@ -76,7 +76,7 @@ pipeline {
                             waitForQualityGate abortPipeline: false
                         }
                     } catch (Exception e) {
-                        echo "Quality Gate skipped due to delay"
+                        echo "Quality Gate skipped"
                     }
                 }
             }
@@ -87,7 +87,6 @@ pipeline {
             steps {
                 sh '''
                     if [ ! -d "dependency-check" ]; then
-                        echo "Downloading OWASP Dependency Check..."
                         wget -q https://github.com/jeremylong/DependencyCheck/releases/download/v9.0.9/dependency-check-9.0.9-release.zip
                         unzip -q dependency-check-9.0.9-release.zip
                     fi
@@ -111,13 +110,13 @@ pipeline {
             }
         }
 
-        // ✅ DOCKER BUILD & PUSH
+        // 🚀 DOCKER BUILD & PUSH (OPTIMIZED)
         stage('Docker Build & Push') {
             steps {
                 script {
                     withDockerRegistry(credentialsId: "${DOCKER_CRED}", url: 'https://index.docker.io/v1/') {
                         sh '''
-                            docker build -t $DOCKER_IMAGE:latest .
+                            docker build --no-cache -t $DOCKER_IMAGE:latest .
                             docker push $DOCKER_IMAGE:latest
                         '''
                     }
