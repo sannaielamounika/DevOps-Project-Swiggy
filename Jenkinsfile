@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_IMAGE  = "sannaielamounika/swiggyapp"
+        DOCKER_IMAGE  = "mounikasannaiela/swiggyapp"
         DOCKER_CRED   = 'DockerHub-token'
         SONAR_TOKEN   = credentials('sonar-token')
     }
