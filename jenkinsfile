@@ -42,7 +42,7 @@ pipeline {
             }
         }
 
-        // 🔥 FIXED SONAR (NO ESLINT CRASH)
+        // 🔥 SONAR FIXED
         stage('SonarQube Analysis') {
             steps {
                 withSonarQubeEnv('sonar-server') {
@@ -71,20 +71,28 @@ pipeline {
             }
         }
 
-        // 🔐 OWASP (FAST MODE)
-        stage('OWASP Dependency Check') {
+        // 🔐 OWASP (MANUAL - NO PLUGIN)
+        stage('OWASP Scan') {
             steps {
-                dependencyCheck additionalArguments: '''
-                    --scan .
-                    --format XML
-                    --noupdate
-                ''', odcInstallation: 'OWASP-DC'
+                sh '''
+                    echo "Downloading OWASP Dependency Check..."
 
-                dependencyCheckPublisher pattern: '**/dependency-check-report.xml'
+                    wget -q https://github.com/jeremylong/DependencyCheck/releases/download/v9.0.9/dependency-check-9.0.9-release.zip
+
+                    unzip -q dependency-check-9.0.9-release.zip
+
+                    cd dependency-check/bin
+
+                    ./dependency-check.sh \
+                    --project "swiggyapp" \
+                    --scan /var/lib/jenkins/workspace/swiggyapp \
+                    --format XML \
+                    --noupdate
+                '''
             }
         }
 
-        // ⚡ FAST TRIVY FILE SCAN
+        // ⚡ TRIVY FS
         stage('Trivy File Scan') {
             steps {
                 sh '''
@@ -106,7 +114,7 @@ pipeline {
             }
         }
 
-        // ⚡ FAST TRIVY IMAGE SCAN
+        // ⚡ TRIVY IMAGE
         stage('Trivy Image Scan') {
             steps {
                 sh '''
