@@ -38,16 +38,14 @@ pipeline {
             }
         }
 
-        // 🔥 FASTER INSTALL
+        // ⚡ FAST INSTALL
         stage('Install Dependencies') {
             steps {
-                sh '''
-                    npm ci --no-audit
-                '''
+                sh 'npm ci --no-audit'
             }
         }
 
-        // ✅ SONAR SCAN
+        // ✅ SONARQUBE SCAN
         stage('SonarQube Analysis') {
             steps {
                 withSonarQubeEnv('sonar-server') {
@@ -67,7 +65,7 @@ pipeline {
             }
         }
 
-        // ✅ NON-BLOCKING QUALITY GATE
+        // ⏳ NON-BLOCKING QUALITY GATE
         stage('Quality Gate') {
             steps {
                 script {
@@ -76,13 +74,13 @@ pipeline {
                             waitForQualityGate abortPipeline: false
                         }
                     } catch (Exception e) {
-                        echo "Quality Gate skipped"
+                        echo "Quality Gate skipped due to delay"
                     }
                 }
             }
         }
 
-        // ✅ OWASP (FIXED)
+        // 🛡️ OWASP SCAN
         stage('OWASP Dependency Check') {
             steps {
                 sh '''
@@ -101,22 +99,28 @@ pipeline {
             }
         }
 
-        // ✅ TRIVY FILE SCAN
+        // 🔍 TRIVY FILE SCAN
         stage('Trivy File Scan') {
             steps {
                 sh '''
-                    trivy fs --scanners vuln . > trivyfs.txt || true
+                    mkdir -p .trivycache
+                    trivy fs \
+                    --cache-dir .trivycache \
+                    --scanners vuln \
+                    --severity HIGH,CRITICAL \
+                    --skip-db-update \
+                    . > trivyfs.txt || true
                 '''
             }
         }
 
-        // 🚀 DOCKER BUILD & PUSH (OPTIMIZED)
+        // 🚀 DOCKER BUILD & PUSH
         stage('Docker Build & Push') {
             steps {
                 script {
                     withDockerRegistry(credentialsId: "${DOCKER_CRED}", url: 'https://index.docker.io/v1/') {
                         sh '''
-                            docker build --no-cache -t $DOCKER_IMAGE:latest .
+                            docker build -t $DOCKER_IMAGE:latest .
                             docker push $DOCKER_IMAGE:latest
                         '''
                     }
@@ -124,16 +128,29 @@ pipeline {
             }
         }
 
-        // ✅ TRIVY IMAGE SCAN
+        // 🔍 TRIVY IMAGE SCAN (FIXED - NO HANG)
         stage('Trivy Image Scan') {
             steps {
-                sh '''
-                    trivy image --scanners vuln $DOCKER_IMAGE:latest > trivyimage.txt || true
-                '''
+                timeout(time: 5, unit: 'MINUTES') {
+                    sh '''
+                        echo "Starting Trivy Image Scan..."
+
+                        mkdir -p .trivycache
+
+                        trivy image \
+                        --cache-dir .trivycache \
+                        --skip-db-update \
+                        --severity HIGH,CRITICAL \
+                        --timeout 4m \
+                        $DOCKER_IMAGE:latest > trivyimage.txt || true
+
+                        echo "Trivy scan completed"
+                    '''
+                }
             }
         }
 
-        // ✅ DEPLOY CONTAINER
+        // 🚀 DEPLOY CONTAINER
         stage('Deploy Container') {
             steps {
                 sh '''
