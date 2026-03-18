@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         DOCKER_IMAGE  = "sannaielamounika/swiggyapp"
-        DOCKER_CRED   = 'dockerHub-token'
+        DOCKER_CRED   = 'DockerHub-token'
         SONAR_TOKEN   = credentials('sonar-token')
     }
 
